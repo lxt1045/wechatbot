@@ -25,5 +25,5 @@ wechat openAI bot
 使用了 [eatmoreapple/openwecha](https://github.com/eatmoreapple/openwechat)库。
 
 实现了以下功能：
-1. 基于聊天对象实现聊天上下文，上下文是 10 分红内的最多 10 条信息。
+1. 基于聊天对象实现聊天上下文，上下文是 10 分钟内的最多 10 条信息。
 2. 实现通过文字实现画图、改图功能，对应 openai 的 images 接口。需通过“图片模式”消息修改情景。
