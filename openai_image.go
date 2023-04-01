@@ -205,7 +205,7 @@ func editImage2(img, mask []byte, n int, size, content string) (urls []string, e
 	if err != nil {
 		log.Println(err)
 	}
-	req.SetBasicAuth("api", "key-3ax6xnjp29jd6fds4gc373sgvjxteol0")
+	req.SetBasicAuth("api", apiKey)
 
 	req.Header.Add("Content-Type", w.FormDataContentType())
 	// req.Header.Add("Content-Type", "application/x-www-form-urlencoded")

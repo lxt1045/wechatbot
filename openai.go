@@ -205,3 +205,98 @@ func replyByGPT3_5(contextMgr ContextMgr, msg string) (reply string, retCtxMgr C
 
 	return reply, retCtxMgr, nil
 }
+
+func openaiEditText(contextMgr ContextMgr, input, instruction string) (reply string, retCtxMgr ContextMgr, err error) {
+	retCtxMgr = contextMgr
+
+	type EditTextReq struct {
+		Model       string  `json:"model"`
+		Input       string  `json:"input,omitempty"`
+		Instruction string  `json:"instruction"`
+		Temperature float32 `json:"temperature,omitempty"`
+	}
+
+	type EditTextResp struct {
+		Object  string `json:"object"`
+		Created int    `json:"created"`
+		Choices []struct {
+			Text  string `json:"text"`
+			Index int    `json:"index"`
+		} `json:"choices"`
+		Usage ResponseUsage `json:"usage"`
+	}
+
+	requestBody := EditTextReq{
+		Model:       "text-davinci-edit-001",
+		Input:       input,
+		Instruction: instruction,
+	}
+	if contextMgr.EditTexTemperature > 0 && contextMgr.EditTexTemperature < 2 {
+		requestBody.Temperature = contextMgr.EditTexTemperature
+	}
+
+	requestData, err := json.Marshal(requestBody)
+
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	log.Debugf("request openai json string : %v", string(requestData))
+	req, err := http.NewRequest("POST", "https://api.openai.com/v1/edits", bytes.NewBuffer(requestData))
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer "+apiKey))
+	client := &http.Client{}
+	response, err := client.Do(req)
+	if err != nil {
+		return
+	}
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(response.Body)
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return
+	}
+
+	resp := &EditTextResp{}
+	log.Debug(string(body))
+	err = json.Unmarshal(body, resp)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	fmt.Println("body:", string(body))
+
+	if len(resp.Choices) > 0 {
+		for _, v := range resp.Choices {
+			reply += "\n"
+			reply += v.Text
+		}
+	}
+
+	if len(reply) == 0 {
+		gptErrorBody := &ChatGPTErrorBody{}
+		err = json.Unmarshal(body, gptErrorBody)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+		reply += "Error: "
+		reply += gptErrorBody.Error["message"].(string)
+	}
+
+	return reply, retCtxMgr, nil
+}

@@ -65,14 +65,18 @@ type Context struct {
 type ModeType int
 
 const (
-	TextMode ModeType = 0
+	ChatMode ModeType = 0
 	ImgMode  ModeType = 1
+	TextEdit ModeType = 2
 )
 
 type ContextMgr struct {
-	contextList []*Context
-	Mode        ModeType // 当前聊天模式
-	LastImg     string
+	contextList        []*Context // 聊天模式下，需保存上下文
+	Mode               ModeType   // 当前聊天模式
+	LastImg            string     // 图片编辑模式下，需要保存上一张图片
+	EditText           string     // 文本编辑模式下，需要保存待编辑文本
+	EditTexTemperature float32    // 文本编辑模式下: 介于 0 和 2 之间。较高的值（如 0.8）将使输出更加随机，而较低的值（如 0.2）将使输出更加集中和确定
+	LastAudio          []byte     // 翻译语音时，需要先保存语音，在发送一次文本触发翻译
 }
 
 func (m *ContextMgr) Init() {

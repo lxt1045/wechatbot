@@ -1,8 +1,8 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/eatmoreapple/openwechat"
@@ -55,27 +55,54 @@ func handler(msg *openwechat.Message) {
 			contextMgr.Mode = ImgMode
 			contextMgr.LastImg = ""
 			SetContextMgr(userFromName, contextMgr)
-			msg.ReplyText("好的，开始图片模式。\n你可以发\"新图片\"跳出当前图片的编辑。\n也可以发\"文本模式\"切换到文本聊天模式。")
+			msg.ReplyText(`好的，开始图片模式。
+你可以发"新图片"跳出当前图片的编辑。
+也可以发"聊天模式"切换到文本聊天模式。
+也可以发"文本编辑"切换到文本编辑模式。`)
 			return
-		} else if content == "文本模式" {
-			contextMgr.Mode = TextMode
+		} else if content == "聊天模式" {
+			contextMgr.Mode = ChatMode
 			if len(contextMgr.contextList) > 0 {
 				contextMgr.contextList = contextMgr.contextList[:0]
 			}
 			SetContextMgr(userFromName, contextMgr)
-			msg.ReplyText("好的，开始文本聊天模式。\n你可以发\"图片模式\"切换到图片模式。")
+			msg.ReplyText(`好的，开始文本聊天模式
+也可以发"图片模式"切换到图片模式。
+也可以发"文本编辑"切换到文本编辑模式。`)
 			return
 		} else if content == "新图片" {
 			if contextMgr.Mode == ImgMode {
 				contextMgr.LastImg = ""
 				SetContextMgr(userFromName, contextMgr)
-				msg.ReplyText("好的，准备好创建新图片，请说出你对图片的描述。\n你可以发\"文本模式\"切换到文本聊天模式。")
+				msg.ReplyText(`好的，准备好创建新图片，请说出你对图片的描述。
+也可以发"聊天模式"切换到文本聊天模式。
+也可以发"文本编辑"切换到文本编辑模式。`)
 				return
 			}
+		} else if content == "文本编辑" {
+			contextMgr.Mode = TextEdit
+			SetContextMgr(userFromName, contextMgr)
+			msg.ReplyText(`好的，开始文本编辑模式。
+也可以发"图片模式"切换到图片模式。
+也可以发"聊天模式"切换到文本聊天模式。`)
+			return
 		}
 
 		switch contextMgr.Mode {
-		case TextMode:
+		case ChatMode:
+			go func() {
+				if len(contextMgr.LastAudio) > 0 {
+					replyAudio(contextMgr, msg, content)
+					return
+				}
+				contextMgr = replyText(contextMgr, content, msg)
+				SetContextMgr(userFromName, contextMgr)
+			}()
+		case TextEdit:
+			go func() {
+				contextMgr = editText(contextMgr, content, msg)
+				SetContextMgr(userFromName, contextMgr)
+			}()
 		case ImgMode:
 			go func() {
 				contextMgr = replyCreateImage(contextMgr, msg, 1, "1024x1024", content)
@@ -84,76 +111,7 @@ func handler(msg *openwechat.Message) {
 			return
 		}
 
-		imgPre := "img"
-		if strings.HasPrefix(content, imgPre) {
-			// img:n:size:content
-			strs := strings.SplitN(content, ":", 4)
-			if len(strs) != 4 {
-				strs = strings.SplitN(content, "：", 4)
-			}
-			if len(strs) != 4 {
-				_, err = msg.ReplyText(imgType)
-				if err != nil {
-					log.Println("回复出错：", err.Error())
-					return
-				}
-				break
-			}
-
-			x := strings.TrimSpace(strs[1])
-			n := 3
-			if x != "" {
-				n, err = strconv.Atoi(x)
-				if err != nil {
-					_, err = msg.ReplyText(imgType)
-					if err != nil {
-						log.Println("回复出错：", err.Error())
-						return
-					}
-					return
-				}
-			}
-			if n <= 0 {
-				n = 1
-			} else if n > 8 {
-				n = 8
-			}
-
-			y := strings.TrimSpace(strs[2])
-			size := 0
-			if y != "" {
-				size, err = strconv.Atoi(y)
-				if err != nil {
-					return
-				}
-			}
-			sizeStr := "1024x1024"
-			if size == 256 || size == 1024 {
-				s := strconv.Itoa(size)
-				sizeStr = s + "x" + s
-			}
-
-			content := strs[3]
-			go func() {
-				contextMgr = replyCreateImage(contextMgr, msg, n, sizeStr, content)
-				SetContextMgr(userFromName, contextMgr)
-			}()
-			break
-		}
-		if strings.HasSuffix(content, "的图片") ||
-			strings.HasSuffix(content, "的照片") ||
-			strings.HasSuffix(content, "的画") {
-			go func() {
-				contextMgr = replyCreateImage(contextMgr, msg, 3, "1024x1024", content)
-				SetContextMgr(userFromName, contextMgr)
-			}()
-			break
-		}
-		go func() {
-			contextMgr = replyText(contextMgr, content, msg)
-			SetContextMgr(userFromName, contextMgr)
-		}()
-	case false && msg.IsFriendAdd():
+	case msg.IsFriendAdd():
 		replyFriendAdd(msg)
 	case msg.MsgType == openwechat.MsgTypeApp &&
 		msg.AppMsgType == openwechat.AppMsgTypeTransfers:
@@ -161,8 +119,29 @@ func handler(msg *openwechat.Message) {
 	case msg.MsgType == openwechat.MsgTypeSys &&
 		msg.AppMsgType == openwechat.AppMsgTypeRedEnvelopes:
 		log.Printf("红包:%+v", msg)
-
+	case msg.MsgType == openwechat.MsgTypeVoice:
+		resp, err := msg.GetVoice()
+		if err != nil {
+			log.Printf("err:%v", err)
+			return
+		}
+		defer resp.Body.Close()
+		bs, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("err:%v", err)
+			return
+		}
+		contextMgr := GetContextMgr(userFromName)
+		contextMgr.LastAudio = bs
+		SetContextMgr(userFromName, contextMgr)
+		// err = os.WriteFile("test.mp3", bs, 0666)
+		// if err != nil {
+		// 	log.Printf("err:%v", err)
+		// 	return
+		// }
 	default:
+		log.Printf("msg:%+v", msg)
+
 	}
 	return
 }

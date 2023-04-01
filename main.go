@@ -16,7 +16,7 @@ func init() {
 var mGroup = make(map[string]*openwechat.Group)
 var mFriend = make(map[string]*openwechat.Friend)
 
-func main() {
+func Init() {
 	cfg := struct {
 		APIKey string `json:"api_key"`
 	}{}
@@ -29,6 +29,11 @@ func main() {
 		log.Panicln(err)
 	}
 	apiKey = cfg.APIKey
+
+}
+
+func main() {
+	Init()
 
 	// bot := openwechat.DefaultBot()
 	bot := openwechat.DefaultBot(openwechat.Desktop) // 桌面模式，上面登录不上的可以尝试切换这种模式

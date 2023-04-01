@@ -42,6 +42,33 @@ func replyText(contextMgr ContextMgr, content string, msg *openwechat.Message) (
 	return
 }
 
+func editText(contextMgr ContextMgr, content string, msg *openwechat.Message) (retCtxMgr ContextMgr) {
+	log.Printf("Received Msg : %v", msg.Content)
+	retCtxMgr = contextMgr
+	if retCtxMgr.EditText == "" {
+		retCtxMgr.EditText = content
+		reply := "待编辑文本已保存，请告诉该如何编辑该文本"
+		msg.ReplyText(reply)
+		log.Println("reply:", reply)
+		return
+	}
+	input := retCtxMgr.EditText
+	retCtxMgr.EditText = ""
+
+	reply, retCtxMgr, err := openaiEditText(retCtxMgr, input, content)
+	if err != nil {
+		log.Println(err)
+		msg.ReplyText(fmt.Sprintf("bot error: %s", err.Error()))
+		log.Println("reply:", reply)
+		return
+	}
+	reply = postReply(reply)
+	msg.ReplyText(reply)
+	log.Println("reply:", reply)
+	// msg.ReplyText("以上回答由 ChatGPT 提供")
+	return
+}
+
 func replyFriendAdd(msg *openwechat.Message) {
 	log.Printf("Received Msg : %v", msg.Content)
 	fm, err := msg.FriendAddMessageContent()
@@ -88,6 +115,7 @@ func GetTmpFileFromURL(url string, f func(*os.File) error) (err error) {
 	}
 	return f(tmpFile)
 }
+
 func replyCreateImage(contextMgr ContextMgr, msg *openwechat.Message, n int, size, content string) (retCtxMgr ContextMgr) {
 	retCtxMgr = contextMgr
 
@@ -139,5 +167,26 @@ func replyCreateImage(contextMgr ContextMgr, msg *openwechat.Message, n int, siz
 			continue
 		}
 	}
+	return
+}
+
+func replyAudio(contextMgr ContextMgr, msg *openwechat.Message, content string) (retCtxMgr ContextMgr) {
+	retCtxMgr = contextMgr
+
+	log.Printf("Received Msg : %v", msg.Content)
+
+	bs := retCtxMgr.LastAudio
+	retCtxMgr.LastAudio = retCtxMgr.LastAudio[:0]
+	if len(bs) == 0 {
+		return
+	}
+	reply, err := openaiReplyAudio(bs, content)
+	if err != nil {
+		log.Printf("[replyAudio] err: %v", err)
+		return
+	}
+
+	msg.ReplyText(reply)
+	log.Println("reply:", reply)
 	return
 }
