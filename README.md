@@ -19,11 +19,17 @@ wechat openAI bot
 
 # openai 接口
 [官方接口文档](https://platform.openai.com/docs/api-reference/edits)
-跟着文档写接口就好了，这个库实现了 chat 和 images 的相关接口，分别在 openai.go 和 openai_image.go 文件中。
+跟着文档写接口就好了，这个库实现了大部分 openai 接口：
+1. chat: 带上下文聊天，openai.go
+2. edits: 文本编辑，openai.go
+3. images: 根据文本画图，改图，openai_image.go
+4. audio: 语音翻译，openai_audio.go
 
 # 关于微信机器人
 使用了 [eatmoreapple/openwecha](https://github.com/eatmoreapple/openwechat)库。
 
 实现了以下功能：
-1. 基于聊天对象实现聊天上下文，上下文是 10 分钟内的最多 10 条信息。
-2. 实现通过文字实现画图、改图功能，对应 openai 的 images 接口。需通过“图片模式”消息修改情景。
+1. “聊天模式”： 基于聊天对象实现聊天上下文，上下文是 10 分钟内的最多 10 条信息，对应 openai 的 chat 接口。
+1. “文本编辑”： 根据描述修改文本内容，对应 openai 的 edits 接口。
+1. “图片模式”： 实现通过文字实现画图、改图功能，对应 openai 的 images 接口。
+1. 语音翻译：   “聊天模式”下发送语音，在发送一段描述，返回语音翻译，对应 openai 的 audio 接口。
