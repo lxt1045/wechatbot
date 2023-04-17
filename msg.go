@@ -15,7 +15,8 @@ func replyText(contextMgr ContextMgr, content string, msg *openwechat.Message) (
 	log.Printf("Received Msg : %v", msg.Content)
 	// content := msg.Content
 	// reply, err := replyByGPT(userFromName,content)
-	reply, retCtxMgr, err := replyByGPT3_5(contextMgr, content)
+	// reply, retCtxMgr, err := replyByGPT3_5(contextMgr, content)
+	reply, retCtxMgr, err := replyByGPT4(contextMgr, content)
 	if err != nil {
 		log.Println(err)
 		// 如果文字超过4000个字会回错，截取前4000个文字进行回复

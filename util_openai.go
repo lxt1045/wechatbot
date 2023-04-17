@@ -31,8 +31,9 @@ type ChatGPTResponseBody struct {
 
 // ChatGPTRequestBody 请求体
 type ChatGPTRequestBody struct {
-	Model    string        `json:"model"`
-	Messages []ChatMessage `json:"messages"`
+	Model     string        `json:"model"`
+	MaxTokens int           `json:"max_tokens"`
+	Messages  []ChatMessage `json:"messages"`
 }
 
 type ChatMessage struct {
@@ -53,7 +54,8 @@ type ResponseUsage struct {
 }
 
 type ChatGPTErrorBody struct {
-	Error map[string]interface{} `json:"error"`
+	Error   map[string]interface{} `json:"error"`
+	Message string                 `json:"message"`
 }
 
 type Context struct {

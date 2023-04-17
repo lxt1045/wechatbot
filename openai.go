@@ -88,7 +88,7 @@ func replyByGPT(user, msg string) (string, error) {
 	return reply, nil
 }
 
-var apiKey = ""
+var apiKey, api2dKey = "", ""
 
 var (
 	mContextMgr sync.Map
@@ -201,6 +201,107 @@ func replyByGPT3_5(contextMgr ContextMgr, msg string) (reply string, retCtxMgr C
 
 		reply += "Error: "
 		reply += gptErrorBody.Error["message"].(string)
+	}
+
+	return reply, retCtxMgr, nil
+}
+
+// replyByGPT4 sendMsg
+func replyByGPT4(contextMgr ContextMgr, msg string) (reply string, retCtxMgr ContextMgr, err error) {
+	retCtxMgr = contextMgr
+	var messages []ChatMessage
+	messages = append(messages, ChatMessage{
+		Role:    "system",
+		Content: "You are a helpful assistant.",
+	})
+	list := retCtxMgr.GetData()
+	for i := 0; i < len(list); i++ {
+		messages = append(messages, ChatMessage{
+			Role:    "user",
+			Content: list[i].Request,
+		})
+
+		messages = append(messages, ChatMessage{
+			Role:    "assistant",
+			Content: list[i].Response,
+		})
+	}
+
+	messages = append(messages, ChatMessage{
+		Role:    "user",
+		Content: msg,
+	})
+
+	requestBody := ChatGPTRequestBody{
+		Model:     "gpt-4-0314",
+		Messages:  messages,
+		MaxTokens: 256,
+	}
+	requestData, err := json.Marshal(requestBody)
+
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	log.Debugf("request openai json string : %v", string(requestData))
+	req, err := http.NewRequest("POST", "https://stream.api2d.net/v1/chat/completions", bytes.NewBuffer(requestData))
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer "+api2dKey))
+	client := &http.Client{}
+	response, err := client.Do(req)
+	if err != nil {
+		return
+	}
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(response.Body)
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return
+	}
+
+	gptResponseBody := &ChatGPTResponseBody{}
+	log.Debug(string(body))
+	err = json.Unmarshal(body, gptResponseBody)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	if len(gptResponseBody.Choices) > 0 {
+		for _, v := range gptResponseBody.Choices {
+			reply += "\n"
+			reply += v.Message.Content
+		}
+
+		retCtxMgr.AppendMsg(msg, reply)
+	}
+
+	if len(reply) == 0 {
+		gptErrorBody := &ChatGPTErrorBody{}
+		err = json.Unmarshal(body, gptErrorBody)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+		reply += "Error: "
+		if gptErrorBody.Error != nil {
+			reply += gptErrorBody.Error["message"].(string)
+		} else {
+			reply += gptErrorBody.Message
+		}
 	}
 
 	return reply, retCtxMgr, nil

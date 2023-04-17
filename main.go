@@ -18,7 +18,8 @@ var mFriend = make(map[string]*openwechat.Friend)
 
 func Init() {
 	cfg := struct {
-		APIKey string `json:"api_key"`
+		APIKey   string `json:"api_key"`
+		API2dKey string `json:"api2d_key"`
 	}{}
 	bs, err := os.ReadFile(`./config.json`)
 	if err != nil {
@@ -28,7 +29,7 @@ func Init() {
 	if err != nil || cfg.APIKey == "" {
 		log.Panicln(err)
 	}
-	apiKey = cfg.APIKey
+	apiKey, api2dKey = cfg.APIKey, cfg.API2dKey
 
 }
 
