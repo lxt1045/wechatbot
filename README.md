@@ -33,3 +33,7 @@ wechat openAI bot
 1. “文本编辑”： 根据描述修改文本内容，对应 openai 的 edits 接口。
 1. “图片模式”： 实现通过文字实现画图、改图功能，对应 openai 的 images 接口。
 1. 语音翻译：   “聊天模式”下发送语音后，再发送一段描述，返回语音翻译，对应 openai 的 audio 接口。
+
+
+# 交流学习可加好友
+![扫码加微信好友](https://github.com/lxt1045/wechatbot/blob/main/resource/Wechat-lxt.png "微信")
