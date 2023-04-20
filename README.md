@@ -35,5 +35,5 @@ wechat openAI bot
 1. 语音翻译：   “聊天模式”下发送语音后，再发送一段描述，返回语音翻译，对应 openai 的 audio 接口。
 
 
-# 交流学习可加好友
+# 交流学习
 ![扫码加微信好友](https://github.com/lxt1045/wechatbot/blob/main/resource/Wechat-lxt.png "微信")
